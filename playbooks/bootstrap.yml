@@ -1,0 +1,11 @@
+
+- name: prepare host system to support a local LXC cluster
+  hosts: all
+  remote_user: root
+  gather_facts: no
+  tasks:
+    - name: bootstrap - add user to sudoers
+      lineinfile:
+        path: /etc/sudoers.d/gpenaud
+        line: "{{ lxc_user }} ALL=(ALL) NOPASSWD: ALL"
+        create: yes

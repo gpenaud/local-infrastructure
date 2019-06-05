@@ -1,0 +1,8 @@
+
+lxc_user: gpenaud
+lxc_user_password: gpenaud
+lxc_user_home: /home/gpenaud
+lxc_dns_domain: k8s.lan
+lxc_network_dnsmasq_instance: k8s
+lxc_network_interface: eth0
+lxc_network_bridge: k8s-bridge

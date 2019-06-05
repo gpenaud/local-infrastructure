@@ -1,0 +1,96 @@
+
+- name: prepare host system to support a local LXC cluster
+  hosts: localhost
+  tasks:
+    - name: creation - load ssh key path
+      set_fact:
+        my_ssh_key: "{{ lookup('env','HOME') }}/.ssh/id_rsa.pub"
+      tags: always
+
+    - name: creation - set init script
+      set_fact:
+        init_script: |
+          useradd -m -s /bin/bash "{{ lxc_user }}"
+          echo "$password" | passwd --stdin "{{ lxc_user_password }}"
+
+          if [ ! -d ~/.ssh ]; then
+            mkdir -p ~/.ssh
+            echo "{{ lookup('file', my_ssh_key) }}" | tee -a ~/.ssh/authorized_keys
+          fi
+
+          if [ ! -d {{ lxc_user_home }}/.ssh ]; then
+            mkdir -p {{ lxc_user_home }}/.ssh
+            echo "{{ lookup('file', my_ssh_key) }}" | tee -a {{ lxc_user_home }}/.ssh/authorized_keys
+          fi
+
+          echo ". ~/.bashrc" > {{ lxc_user_home }}/.bash_profile
+          chown -R {{ lxc_user }}:{{ lxc_user }} {{ lxc_user_home }}
+      tags: always
+
+    - include_tasks: create/lxc.yml
+      vars:
+        container: "{{ container }}"
+      loop: "{{ groups.all }}"
+      loop_control:
+        loop_var: container
+
+    - name: creation - create lxc containers
+      become: yes
+      lxc_container:
+        name: "{{ container }}"
+        container_log: true
+        template: debian
+        state: started
+        container_config: "{{ lxc_configs[container] }}"
+        template_options: --release stretch --packages iputils-ping,dnsutils,sudo,python
+        container_command: |
+          {{ init_script }}
+      loop: "{{ groups.all }}"
+      loop_control:
+        loop_var: container
+      register: async_container
+      async: 60
+      poll: 0
+      tags: container
+
+    - name: creation - wait for lxc creation
+      become: yes
+      async_status:
+        jid: "{{ result.ansible_job_id }}"
+      loop: "{{ async_container.results }}"
+      loop_control:
+        loop_var: result
+      register: async_poll_results
+      until: async_poll_results.finished
+      retries: 30
+
+    - name: creation - remove ssh host entry
+      shell: "ssh-keygen -f '{{ lxc_user_home }}/.ssh/known_hosts' -R {{ instance }}"
+      loop: "{{ groups.all }}"
+      loop_control:
+        loop_var: instance
+
+- name: give sudo to user
+  hosts: all
+  remote_user: root
+  gather_facts: no
+  tasks:
+    - name: bootstrapping - wait for ssh to be available
+      wait_for_connection:
+        timeout: 30
+      tags: bootstrap
+
+    - name: bootstrapping - test DNS resolution
+      command: dig google.fr
+      register: result
+      until: result.stdout.find("NOERROR") != -1
+      retries: 5
+      delay: 1
+      tags: bootstrap
+
+    - name: bootstrapping - add user to sudoers
+      lineinfile:
+        path: "/etc/sudoers.d/{{ lxc_user }}"
+        line: "{{ lxc_user }} ALL=(ALL) NOPASSWD: ALL"
+        create: yes
+      tags: bootstrap

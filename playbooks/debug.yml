@@ -1,0 +1,28 @@
+
+- name: prepare host system to support a local kubernetes cluster
+  hosts: all
+
+  tasks:
+    # - set_fact:
+    #     is_privileged: "{{ inventory_hostname in groups.privileged }}"
+    #     has_hmac: "{{ hostvars[inventory_hostname].hmac is defined }}"
+    #     lxc_unprivileged_config:
+    #       - "lxc.network.name=eth0"
+    #       - "lxc.network.link=k8s-bridge"
+    #     lxc_privileged_config:
+    #       - "lxc.aa_profile=unconfined"
+    #       - "lxc.mount.auto=proc:rw sys:rw cgroup:rw"
+    #       - "lxc.cgroup.devices.allow=a"
+    #       - "lxc.cap.drop="
+    #     hmac: "lxc.network.hwaddr={{ hostvars[inventory_hostname].hmac | default(omit) }}"
+    #
+    # - name: merge mac address if exists
+    #   set_fact:
+    #     lxc_unprivileged_config: "{{ lxc_unprivileged_config + [hmac] if has_hmac else lxc_unprivileged_config }}"
+    #
+    # - name: merge privileged configuration if lxc is in privileged group
+    #   set_fact:
+    #     lxc_config: "{{ lxc_unprivileged_config + lxc_privileged_config if is_privileged else lxc_unprivileged_config }}"
+    #
+    # - debug:
+    #     msg: "{{ lxc_config }}"

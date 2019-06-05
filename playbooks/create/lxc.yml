@@ -1,0 +1,25 @@
+
+- set_fact:
+    is_privileged: "{{ container in groups.privileged }}"
+    has_hmac: "{{ hostvars[container].hmac is defined }}"
+    lxc_unprivileged_config:
+      - "lxc.network.name={{ lxc_network_interface }}"
+      - "lxc.network.link={{ lxc_network_bridge }}"
+    lxc_privileged_config:
+      - "lxc.aa_profile=unconfined"
+      - "lxc.mount.auto=proc:rw sys:rw cgroup:rw"
+      - "lxc.cgroup.devices.allow=a"
+      - "lxc.cap.drop="
+    hmac: "lxc.network.hwaddr={{ hostvars[container].hmac | default(omit) }}"
+
+- name: creation - merge mac address if exists
+  set_fact:
+    lxc_unprivileged_config: "{{ lxc_unprivileged_config + [hmac] if has_hmac else lxc_unprivileged_config }}"
+
+- name: creation - merge privileged configuration if lxc is in privileged group
+  set_fact:
+    lxc_container_config: "{{ lxc_unprivileged_config + lxc_privileged_config if is_privileged else lxc_unprivileged_config }}"
+
+- name: creation - merge configuration
+  set_fact:
+    lxc_configs: "{{ lxc_configs | default({}) | combine({container: lxc_container_config}) }}"

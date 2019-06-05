@@ -1,0 +1,18 @@
+
+unprivileged:
+  hosts:
+    controller-0:
+      hmac: 00:12:41:77:f9:20
+    controller-1:
+      hmac: 00:12:41:77:f9:21
+    controller-2:
+      hmac: 00:12:41:77:f9:22
+
+privileged:
+  hosts:
+    worker-0:
+      hmac: 00:12:41:77:f9:30
+    worker-1:
+      # hmac: 00:12:41:77:f9:31
+    worker-2:
+      # hmac: 00:12:41:77:f9:32

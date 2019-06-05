@@ -1,0 +1,10 @@
+
+- name: clean host from local cluster
+  hosts: localhost
+  tasks:
+    - name: Remove stack lxc containers
+      become: yes
+      lxc_container:
+        name: "{{ item }}"
+        state: absent
+      loop: "{{ groups.all }}"

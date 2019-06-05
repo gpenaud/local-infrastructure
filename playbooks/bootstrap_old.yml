@@ -1,0 +1,52 @@
+
+- name: prepare host system to support a local kubernetes cluster
+  hosts: localhost
+  tasks:
+    - name: ensure presence of the eth0 ip by executing dhclient
+      become: yes
+      shell: lxc-attach -n {{ container }} -- dhclient -v
+      loop: "{{ groups.all }}"
+      loop_control:
+        loop_var: container
+      when: hostvars[container].hmac is not defined
+
+    - name: restart dnsmasq instance
+      become: yes
+      systemd:
+        name: "dnsmasq@{{ lxc_network_dnsmasq_instance }}"
+        state: restarted
+
+    - name: bootstrap packages to use ansible on nodes
+      become: yes
+      shell: |
+        lxc-attach -n {{ container }} -- apt-get update
+      loop: "{{ groups.all }}"
+      loop_control:
+        loop_var: container
+      register: async_packages
+      async: 60
+      poll: 0
+
+    - name: bootstrap packages to use ansible on nodes
+      become: yes
+      shell: |
+        lxc-attach -n {{ container }} -- apt-get install -y sudo python
+        lxc-attach -n {{ container }} -- bash -c 'echo "{{ lxc_user }} ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers.d/gpenaud'
+      loop: "{{ groups.all }}"
+      loop_control:
+        loop_var: container
+      register: async_packages
+      async: 60
+      poll: 0
+
+    - name: wait for python/sudo boostrapping
+      become: yes
+      async_status:
+        jid: "{{ result.ansible_job_id }}"
+      loop: "{{ async_packages.results }}"
+      loop_control:
+        loop_var: result
+      register: async_poll_packages_results
+      until: async_poll_packages_results.finished
+      retries: 30
+  tags: bootstrap
