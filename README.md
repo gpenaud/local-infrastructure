@@ -1,4 +1,4 @@
-# LOCAL INFRASTRUCTURES
+# LOCAL INFRASTRUCTURE
 
 a special guide to build local and powerful infrastructures based on vagrant, lxc and dnsmasq.
 it works especially good on laptops, and can without problem be used through wlan connections
