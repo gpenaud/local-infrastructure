@@ -113,3 +113,66 @@ network ; first, we need to generate a "proxy" dnsmasq instance, wich will redir
 dns queries from localhost to inner bridged networks and google dns  
 
 step 9:
+  stop and disable main dnsmasq service
+  ```
+  sudo systemctl stop dnsmasq
+  sudo systemctl disable dnsmasq
+  ```
+
+step 10:
+  define dnsmasq proxy instance in /etc/dnsmasq.d/proxy.conf
+
+  ```
+  interface=lo
+  bind-dynamic
+
+  cache-size=0
+  no-negcache
+
+  server=/swarm/10.100.0.1
+  server=/lxc/10.101.0.1
+  server=/#/8.8.8.8
+  ```
+
+  then stop and disable main dnsmasq@proxy service
+  ```
+  sudo systemctl enable dnsmasq@proxy
+  sudo systemctl start dnsmasq@proxy
+  ```
+
+step 11:
+  define dnsmasq lxc-bridge instance in /etc/dnsmasq.d/lxc-bridge.conf
+
+  ```
+  interface=lxc-bridge
+  bind-dynamic
+
+  domain=lxc
+  cache-size=0
+
+  dhcp-leasefile=/tmp/dhcp-leases-lxc-bridge
+  dhcp-range=10.101.0.2,10.101.0.254,24h
+  dhcp-option=option:netmask,255.255.255.0
+  dhcp-option=option:router,10.101.0.1
+  dhcp-option=option:dns-server,10.101.0.1
+  dhcp-option=option:domain-name,lxc
+
+  server=/lxc/10.101.0.1
+  server=/#/8.8.8.8
+  ```
+
+  then stop and disable main dnsmasq@lxc-bridge service
+  ```
+  sudo systemctl enable dnsmasq@lxc-bridge
+  sudo systemctl start dnsmasq@lxc-bridge
+  ```
+
+
+## final
+
+step 12:
+  launch vagrant cluster
+  ```
+  sudo vagrant destroy --force
+  sudo vagrant up
+  ```
